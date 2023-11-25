@@ -9,7 +9,7 @@
 #include <netinet/in.h>
 #include <fstream>
 
-const int PORT = 8886;
+const int PORT = 8885;
 const int BUFFER_SIZE = 1024;
 
 int main(int argc, char **argv) {
