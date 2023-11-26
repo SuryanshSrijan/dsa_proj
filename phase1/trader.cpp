@@ -234,6 +234,7 @@ void solve2() {
         type.push_back(((data[i][L-1][0] == 'b')?0:1));
         std::vector<double> temp(indexx);
         // check cancellation
+        
     }
 }
 
