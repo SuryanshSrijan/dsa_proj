@@ -218,23 +218,128 @@ namespace part2{
 void solve2() {
     mapSI index_map;
     std::vector <std::vector<double>> lcombs;
+    std::vector <std::string> names;
     std::vector <int> price;
     std::vector <bool> type;
     int indexx = 0, num_l = 0;
     for(int i=0;i<data.size();++i) {
+        bool trade = 0;
         int L = data[i].size();
         for(int j=0;j<(L-2);j+=2) {
             auto it = index_map.find(data[i][j]);
             if(it == nullptr) {
                 index_map.insert(data[i][j],indexx++);
-                for(int k=0;k<lcombs.size();++k) lcombs[k].push_back(0);
+                names.push_back(data[i][j]);
+                for(int k=0;k<num_l;++k) lcombs[k].push_back(0);
             }
         }
-        price.push_back(stoi(data[i][L-2]));
-        type.push_back(((data[i][L-1][0] == 'b')?0:1));
-        std::vector<double> temp(indexx);
-        // check cancellation
-        
+        int currprice = stoi(data[i][L-2]);
+        bool currtype = ((data[i][L-1][0] == 'b')?0:1);
+        // std::cout<<" 99 "<<indexx<<std::endl;
+        std::vector<double> temp(indexx,0);
+        for(int j = 0;j<(L-2);j+=2) {
+            temp[index_map.find(data[i][j])->value] = stoi(data[i][j+1])*(currtype?-1:1);
+        }
+        // for(int j=0;j<temp.size();++j) {
+        //     std::cout<<temp[j]<<" 00 ";
+        // }
+        if(i==0) {
+            std::cout<<"No Trade"<<std::endl;
+            lcombs.push_back(temp);
+            type.push_back(currtype);
+            price.push_back(currprice);
+            num_l++;
+        //     for(int j=0;j<num_l;++j) {
+        //     for(int k=0;k<indexx;++k) {
+        //         std::cout<<lcombs[j][k]<<" ";
+        //     }
+        //     std::cout<<std::endl;
+        // }
+            continue;
+        }
+        // for(int j=0;j<num_l;++j) {
+        //     for(int k=0;k<indexx;++k) {
+        //         std::cout<<lcombs[j][k]<<" ";
+        //     }
+        //     std::cout<<std::endl;
+        // }
+        bool flag = 0;
+        for(int j=0;j<num_l;++j) {
+            flag = 1;
+            for(int k=0;k<indexx;++k) {
+                if(temp[k] != lcombs[j][k]) {
+                    flag = 0;
+                    break;
+                }
+            }
+            std::cout<<flag<<std::endl;
+            if(!flag) continue;
+            if(type[j] != currtype) {
+                //remove both
+                lcombs.erase(lcombs.begin()+j);
+                price.erase(price.begin()+j);
+                type.erase(type.begin()+j);
+            }
+            else {
+                if(currtype = 'b') {
+                    if(currprice < price[j]) {
+                        //do nothing
+                    }
+                    else {
+                        price[j] = currprice;
+                    }
+                }
+                else {
+                    if(currprice>price[j]){
+                        // do nothing
+                    }
+                    else {
+                        price[j] = currprice;
+                    }
+                }
+            }
+            break;
+        }
+        if(!flag) {
+            std::cout<<"No Trade"<<std::endl;
+            continue;
+        }
+        std::vector<int> ans = part2::valid_arbitrage(lcombs,temp);
+        // for(int j = ans.size()-1;j>=0;--j) std::cout<<ans[j]<<std::endl;
+        if(ans.empty()) {
+            
+        for(int j=0;j<num_l;++j) {
+            for(int k=0;k<indexx;++k) {
+                std::cout<<lcombs[j][k]<<" ";
+            }
+            std::cout<<std::endl;
+        }
+            std::cout<<"No Trade"<<std::endl;
+            lcombs.push_back(temp);
+            type.push_back(currtype);
+            price.push_back(currprice);
+            num_l++;
+            
+        for(int j=0;j<num_l;++j) {
+            for(int k=0;k<indexx;++k) {
+                std::cout<<lcombs[j][k]<<" ";
+            }
+            std::cout<<std::endl;
+        }
+            continue;
+        }
+        for(int j = ans.size()-1;j>=0;--j) {
+            for(int k = 0;k<indexx;++k) {
+                if(lcombs[j][k]) {
+                    std::cout<<names[k]<<" "<<lcombs[j][k]*(type[j]?-1:1)<<" ";
+                }
+                std::cout<<std::endl;
+                lcombs.erase(lcombs.begin()+j);
+                price.erase(price.begin()+j);
+                type.erase(type.begin()+j);
+            }
+        }
+
     }
 }
 
