@@ -182,7 +182,10 @@ namespace part2{
         std::vector<std::vector<double>> inv(n, std::vector<double> (n,0));
         for(int i=0;i<n;++i) inv[i][i] = 1;
         for (int i = 0; i < n; i++) {
-            assert(std::abs(matr[i][i]) > 1e-10);
+            if(fabs(matr[i][i]) < 1e-10) {
+                std::vector<std::vector<double>> tempp(n, std::vector<double> (n,0));
+                return tempp;
+            }
             double diag = matr[i][i];
             for (int j = 0; j < n; j++) {
                 matr[i][j] /= diag;
@@ -202,12 +205,14 @@ namespace part2{
     }
 
     std::vector<int> valid_arbitrage(std::vector<std::vector<double>> A, std::vector<double> B) {
+        for(int i=0;i<B.size();++i) B[i] *= -1;
         std::vector<double> coeff = vec_mul(matrix_mul(matrix_inverse(matrix_mul(A,transpose(A))),A),B);
         bool flag = 1;
         for(int i=0;i<coeff.size();++i) {
             if(fabs(coeff[i])>eps && fabs(coeff[i]-1)>eps ) flag = 0;
         }
         std::vector <int> ans;
+        ans.push_back(flag);
         if(flag) for(int i=0;i<coeff.size();++i) if(fabs(coeff[i]-1) <= eps) ans.push_back(i);
         return ans;
     }
@@ -222,6 +227,7 @@ void solve2() {
     std::vector <int> price;
     std::vector <bool> type;
     int indexx = 0, num_l = 0;
+    int total = 0;
     for(int i=0;i<data.size();++i) {
         bool trade = 0;
         int L = data[i].size();
@@ -235,112 +241,134 @@ void solve2() {
         }
         int currprice = stoi(data[i][L-2]);
         bool currtype = ((data[i][L-1][0] == 'b')?0:1);
-        // std::cout<<" 99 "<<indexx<<std::endl;
         std::vector<double> temp(indexx,0);
         for(int j = 0;j<(L-2);j+=2) {
             temp[index_map.find(data[i][j])->value] = stoi(data[i][j+1])*(currtype?-1:1);
         }
-        // for(int j=0;j<temp.size();++j) {
-        //     std::cout<<temp[j]<<" 00 ";
-        // }
         if(i==0) {
             std::cout<<"No Trade"<<std::endl;
             lcombs.push_back(temp);
             type.push_back(currtype);
             price.push_back(currprice);
             num_l++;
-        //     for(int j=0;j<num_l;++j) {
-        //     for(int k=0;k<indexx;++k) {
-        //         std::cout<<lcombs[j][k]<<" ";
-        //     }
-        //     std::cout<<std::endl;
-        // }
             continue;
         }
-        // for(int j=0;j<num_l;++j) {
-        //     for(int k=0;k<indexx;++k) {
-        //         std::cout<<lcombs[j][k]<<" ";
-        //     }
-        //     std::cout<<std::endl;
-        // }
         bool flag = 0;
         for(int j=0;j<num_l;++j) {
             flag = 1;
             for(int k=0;k<indexx;++k) {
-                if(temp[k] != lcombs[j][k]) {
+                if(temp[k]*(currtype?-1:1) != lcombs[j][k]) {
                     flag = 0;
                     break;
                 }
             }
-            std::cout<<flag<<std::endl;
             if(!flag) continue;
             if(type[j] != currtype) {
                 //remove both
                 lcombs.erase(lcombs.begin()+j);
                 price.erase(price.begin()+j);
                 type.erase(type.begin()+j);
+                num_l--;
             }
             else {
-                if(currtype = 'b') {
-                    if(currprice < price[j]) {
-                        //do nothing
-                    }
-                    else {
+                if(currtype == 'b') {
+                    if(currprice >= price[j]) {
                         price[j] = currprice;
                     }
                 }
                 else {
-                    if(currprice>price[j]){
-                        // do nothing
-                    }
-                    else {
+                    if(currprice <= price[j]){
                         price[j] = currprice;
                     }
                 }
             }
             break;
         }
-        if(!flag) {
+        if(flag) {
             std::cout<<"No Trade"<<std::endl;
             continue;
         }
         std::vector<int> ans = part2::valid_arbitrage(lcombs,temp);
-        // for(int j = ans.size()-1;j>=0;--j) std::cout<<ans[j]<<std::endl;
-        if(ans.empty()) {
-            
-        for(int j=0;j<num_l;++j) {
-            for(int k=0;k<indexx;++k) {
-                std::cout<<lcombs[j][k]<<" ";
-            }
-            std::cout<<std::endl;
-        }
-            std::cout<<"No Trade"<<std::endl;
-            lcombs.push_back(temp);
-            type.push_back(currtype);
-            price.push_back(currprice);
-            num_l++;
-            
-        for(int j=0;j<num_l;++j) {
-            for(int k=0;k<indexx;++k) {
-                std::cout<<lcombs[j][k]<<" ";
-            }
-            std::cout<<std::endl;
-        }
-            continue;
-        }
-        for(int j = ans.size()-1;j>=0;--j) {
-            for(int k = 0;k<indexx;++k) {
-                if(lcombs[j][k]) {
-                    std::cout<<names[k]<<" "<<lcombs[j][k]*(type[j]?-1:1)<<" ";
+        if(ans.size()==1) {
+            if(ans[0]) {
+                int bestprice = -100000000, besta = 0;
+                for(int a = 0;a<num_l;++a) {
+                    std::vector<std::vector<double>> lc(num_l-1, std::vector<double>(indexx));
+                    for(int b=0;b<num_l;++b) {
+                        if(b == a )continue;
+                        for(int c=0;c<indexx;++c) lc[b-(b>a?1:0)][c] = lcombs[b][c];
+                    }
+                    std::vector<int> nans = part2::valid_arbitrage(lc,temp);
+                    if(nans.size()==1) continue;
+                    int c_price = currprice*(currtype?-1:1);
+                    for(int t = nans.size()-1;t>0;--t) {
+                        nans[t] += (nans[t]>=a?1:0);
+                        int x= nans[t];
+                        c_price += price[x]*(type[x]?-1:1);
+                    }
+                    if(c_price>bestprice) {bestprice = c_price; besta = a; ans = nans;}
                 }
-                std::cout<<std::endl;
-                lcombs.erase(lcombs.begin()+j);
-                price.erase(price.begin()+j);
-                type.erase(type.begin()+j);
+                if(bestprice <= 0) {
+                    std::cout<<"No Trade"<<std::endl;
+                    lcombs.push_back(temp);
+                    type.push_back(currtype);
+                    price.push_back(currprice);
+                    num_l++;
+                    continue;
+                }
+            }
+            else {
+                std::cout<<"No Trade"<<std::endl;
+                lcombs.push_back(temp);
+                type.push_back(currtype);
+                price.push_back(currprice);
+                num_l++;
+                continue;
             }
         }
-
+        int total_price = currprice*(currtype?-1:1);
+        for(int t = ans.size()-1;t>0;--t) {
+            total_price += price[ans[t]]*(type[ans[t]]?-1:1);
+        }
+        if(total_price > 0) {
+            for(int k=0;k<indexx;++k) {
+                if(temp[k]) std::cout<<names[k]<<" "<<temp[k]*(currtype?-1:1)<<" ";
+            }
+            std::cout<<currprice<<" "<<(currtype?'b':'s')<<std::endl;
+            for(int t = ans.size()-1;t>0;--t) {
+                int j = ans[t];
+                // std::cout<<j<<std::endl;
+                for(int k = 0;k<indexx;++k) {
+                    if(lcombs[j][k]) {
+                        std::cout<<names[k]<<" "<<lcombs[j][k]*(type[j]?-1:1)<<" ";
+                    }
+                    // lcombs.erase(lcombs.begin()+j);
+                    // price.erase(price.begin()+j);
+                    // type.erase(type.begin()+j);
+                    // num_l--;
+                }
+                std::cout<<price[j]<<" "<<(type[j]?'b':'s')<<std::endl;
+            }
+            total += total_price;
+        }
+        else {
+            std::cout<<"No Trade"<<std::endl;
+        }
+        for(int t = ans.size()-1;t>0;--t) {
+            // for(int j=0;j<num_l;++j) {
+            //     for(int k=0;k<indexx;++k) {
+            //         std::cout<<lcombs[j][k]<<" ";
+            //     }
+            //     std::cout<<std::endl;
+            // }
+            int j = ans[t];
+            lcombs.erase(lcombs.begin()+j);
+            price.erase(price.begin()+j);
+            type.erase(type.begin()+j);
+            num_l--;   
+        }
     }
+    std::cout<<total<<std::endl;
 }
 
 void solve3() {
