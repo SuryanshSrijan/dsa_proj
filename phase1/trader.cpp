@@ -2,6 +2,8 @@
 #include <vector>
 #include <cstring>
 #include <map>
+#include <cmath>
+#include <cassert>
 
 int ind = 0;
 std::vector < std::vector <std::string>> data;
@@ -136,12 +138,102 @@ void solve1() {
     }
 }
 
-void solve2() {
-    for(auto x: data) {
-        for(auto y: x) {
-            std::cout<<y<<" ♦ ";
+namespace part2{
+
+    double eps = 1e-5;
+
+    std::vector<double> vec_mul(std::vector<std::vector<double>> A, std::vector<double> B) {
+        int n = A.size();
+        int d = A[0].size();
+        std::vector<double> ret_val(n,0);
+        for(int i = 0; i < n; ++i) {
+            for(int j = 0; j < d; ++j) {
+                ret_val[i] += A[i][j]*B[j];
+            }
         }
-        std::cout<<std::endl;
+        return ret_val;
+    }
+
+    std::vector<std::vector<double>> transpose(std::vector<std::vector<double>> A) {
+        std::vector<std::vector<double>> B(A[0].size(), std::vector<double>(A.size()));
+        for(int i=0;i<A.size();++i) {
+            for(int j=0;j<B.size();++j) B[j][i] = A[i][j];
+        }
+        return B;
+    }
+
+    std::vector<std::vector<double>> matrix_mul(std::vector<std::vector<double>> A, std::vector<std::vector<double>> B) {
+        int n = A.size();
+        int k = A[0].size();
+        int d = B[0].size();
+        std::vector<std::vector<double>> ret_val(n, std::vector<double> (d,0));
+        for(int i = 0; i < n; ++i) {
+            for(int j = 0; j < d; ++j) {
+                for(int p = 0; p < k; ++p) {
+                    ret_val[i][j] += A[i][p] * B[p][j];
+                }
+            }
+        }
+        return ret_val;
+    }
+    
+    std::vector<std::vector<double>> matrix_inverse(std::vector<std::vector<double>> matr) {
+        int n = matr.size();
+        std::vector<std::vector<double>> inv(n, std::vector<double> (n,0));
+        for(int i=0;i<n;++i) inv[i][i] = 1;
+        for (int i = 0; i < n; i++) {
+            assert(std::abs(matr[i][i]) > 1e-10);
+            double diag = matr[i][i];
+            for (int j = 0; j < n; j++) {
+                matr[i][j] /= diag;
+                inv[i][j] /= diag;
+            }
+            for (int j = 0; j < n; j++) {
+                if (i != j) {
+                    double ratio = matr[j][i];
+                    for (int k = 0; k < n; k++) {
+                        matr[j][k] -= ratio * matr[i][k];
+                        inv[j][k] -= ratio * inv[i][k];
+                    }
+                }
+            }
+        }
+        return inv;
+    }
+
+    std::vector<int> valid_arbitrage(std::vector<std::vector<double>> A, std::vector<double> B) {
+        std::vector<double> coeff = vec_mul(matrix_mul(matrix_inverse(matrix_mul(A,transpose(A))),A),B);
+        bool flag = 1;
+        for(int i=0;i<coeff.size();++i) {
+            if(fabs(coeff[i])>eps && fabs(coeff[i]-1)>eps ) flag = 0;
+        }
+        std::vector <int> ans;
+        if(flag) for(int i=0;i<coeff.size();++i) if(fabs(coeff[i]-1) <= eps) ans.push_back(i);
+        return ans;
+    }
+
+
+};
+
+void solve2() {
+    std::map <std::string, int> index_map;
+    std::vector <std::vector<double>> lcombs;
+    std::vector <int> price;
+    std::vector <bool> type;
+    int indexx = 0, num_l = 0;
+    for(int i=0;i<data.size();++i) {
+        int L = data[i].size();
+        for(int j=0;j<(L-2);j+=2) {
+            auto it = index_map.find(data[i][j]);
+            if(it == index_map.end()) {
+                index_map[data[i][j]] = indexx++;
+                for(int k=0;k<lcombs.size();++k) lcombs[k].push_back(0);
+            }
+        }
+        price.push_back(stoi(data[i][L-2]));
+        type.push_back(((data[i][L-1][0] == 'b')?0:1));
+        std::vector<double> temp(indexx);
+        // check cancellation
     }
 }
 
