@@ -1,7 +1,7 @@
 #include "receiver.h"
 #include <vector>
 #include <cstring>
-#include <map>
+#include "map.h"
 #include <cmath>
 #include <cassert>
 
@@ -123,15 +123,15 @@ namespace part1 {
 };
 
 void solve1() {
-    std::map <std::string, int> index_map;
+    mapSI index_map;
     int indexx = 0;
     for(int i=0;i<data.size();++i) {
         auto it = index_map.find(data[i][0]);
-        if(it != index_map.end()){
-            part1::stocks[it->second]->process(data[i]);
+        if(it != nullptr){
+            part1::stocks[it->value]->process(data[i]);
         }
         else {
-            index_map[data[i][0]] = indexx++;
+            index_map.insert(data[i][0],indexx++);
             part1::stock * temp = new part1::stock(data[i]);
             part1::stocks.push_back(temp);
         }
@@ -216,7 +216,7 @@ namespace part2{
 };
 
 void solve2() {
-    std::map <std::string, int> index_map;
+    mapSI index_map;
     std::vector <std::vector<double>> lcombs;
     std::vector <int> price;
     std::vector <bool> type;
@@ -225,8 +225,8 @@ void solve2() {
         int L = data[i].size();
         for(int j=0;j<(L-2);j+=2) {
             auto it = index_map.find(data[i][j]);
-            if(it == index_map.end()) {
-                index_map[data[i][j]] = indexx++;
+            if(it == nullptr) {
+                index_map.insert(data[i][j],indexx++);
                 for(int k=0;k<lcombs.size();++k) lcombs[k].push_back(0);
             }
         }

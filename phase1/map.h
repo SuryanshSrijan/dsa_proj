@@ -1,20 +1,18 @@
 #include <iostream>
 #include <cstring>
 
-using namespace std;
 
-
-class RBT{
+class mapSI{
 private:
     struct node{
         node* lchild;
         node* rchild;
         node* parent;
-        string label;
+        std::string label;
         int value;
         char color;
 
-        node(string key,int val): lchild(nullptr),rchild(nullptr),parent(nullptr),label(key),value(val),color('R'){}  
+        node(std::string key,int val): lchild(nullptr),rchild(nullptr),parent(nullptr),label(key),value(val),color('R'){}  
     };
 
     node* root;
@@ -47,7 +45,7 @@ private:
         return x;
     }
 
-    node* insertion(node* root, string key, int val){
+    node* insertion(node* root, std::string key, int val){
         bool f = false; //flag to check red-red conflict
         if(root == nullptr) {
             return new node(key,val);
@@ -127,7 +125,7 @@ private:
         return root;
     }
 
-    node* search(node* start, string key){
+    node* search(node* start, std::string key){
         if(start==nullptr) return NULL;
         node *ans;
         if(start->label==key) return start;
@@ -141,9 +139,9 @@ private:
     }
 
 public:
-    RBT(): root(nullptr),ll(false),rr(false),lr(false),rl(false) {}
+    mapSI(): root(nullptr),ll(false),rr(false),lr(false),rl(false) {}
 
-    void insert(string key, int val){
+    void insert(std::string key, int val){
         if(root==nullptr) {
             root = new node(key,val);
             root->color='B';
@@ -153,7 +151,7 @@ public:
         }
     }
 
-    node* find(string key){
+    node* find(std::string key){
         node* ans;
         ans = search(root,key);
         return ans;
