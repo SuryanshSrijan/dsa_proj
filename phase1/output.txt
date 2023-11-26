@@ -1,4 +1,13 @@
 Receiver is listening on port 8885
-X ♦ 1 ♦ Y ♦ -1 ♦ 10 ♦ b ♦ 
-Z ♦ -1 ♦ Y ♦ 1 ♦ -15 ♦ b ♦ 
-Z ♦ 1 ♦ X ♦ -1 ♦ 10 ♦ b ♦ 
+ASML 650 b
+No Trade
+AAPL 430 s
+AAPL 435 s
+No Trade
+No Trade
+No Trade
+ASML 651 s
+AAPL 432 b
+No Trade
+No Trade
+ASML 650 b
