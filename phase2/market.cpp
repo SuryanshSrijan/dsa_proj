@@ -38,6 +38,7 @@ market::market(int argc, char** argv)
         if(word.size()) temp.push_back(word);
         data.push_back(temp);
     }
+    
 }
 
 void market::start()
