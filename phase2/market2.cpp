@@ -3,7 +3,6 @@
 #include <fstream>
 #include <vector>
 #include <string>
-// #include <bits/stdc++.h>
 
 mapSI stocks;
 mapSI brokers;
@@ -18,9 +17,70 @@ struct order{
     std::string owner;
 };
 
+struct order_heap {
+
+    bool comp(const order a, const order b) {
+        return a.prc < b.prc;
+    }
+
+    int sz;
+    std::vector <order> store;
+    order_heap() {sz = 0;}
+    bool isEmpty() {return (sz==0);}
+    void insert(order a) {
+        store.push_back(a);
+        for(int i=sz; i>0; i=(i-1)/2) {
+            if(!comp(store[(i-1)/2],a)) break;
+            store[i] = store[(i-1)/2];
+            store[(i-1)/2] = a;
+        }
+        sz++;
+    }
+    void heapify(int i) {
+        int c = i,l = 2*i+1, r = l+1;
+        if(l < sz) {
+            if(comp(store[i],store[l])) c = l;
+        }
+        if(r < sz) {
+            if(comp(store[c],store[r])) c = r;
+        }
+        if(c == i) return;
+        order temp = store[i];
+        store[i] = store[c];
+        store[c] = temp;
+        heapify(c);
+    }
+
+    order max() {
+        return store[0];
+    }
+
+    void remove(int i) {
+        store[i].prc = 2147483647;
+        while(i>0) {
+            if(!comp(store[(i-1)/2],store[i])) break;
+            order temp = store[i];
+            store[i] = store[(i-1)/2];
+            store[(i-1)/2] = temp;
+            i = (i-1)/2;
+        }
+        --sz;
+        order temp = store[sz];
+        store[sz] = store[0];
+        store[0] = temp;
+        heapify(0);
+    }
+
+    void remove_expiry(int time) {
+        for(int i=0;i<sz;++i) {
+            if((store[i].ed_time != -1) && (store[i].ed_time<time)) remove(i);
+        }
+    }
+};
+
 struct stock{
-    std::vector<order> buy_orders;
-    std::vector<order> sell_orders;
+    order_heap buy_orders;
+    order_heap sell_orders;
 };
 
 struct broker {
@@ -28,25 +88,6 @@ struct broker {
 
 };
 std::vector<stock> stock_vector;
-// bool scmp(struct order a,struct order b){
-//     if(a.prc!=b.prc) return a.prc>b.prc;
-//     else{
-//         if(a.st_time!=b.st_time) return a.st_time < b.st_time;
-//         else{
-//             return a.owner < b.owner;
-//         }
-//     }
-// }
-// bool bcmp(struct order a,struct order b){
-//     if(a.prc!=b.prc) return a.prc < b.prc;
-//     else{
-//         if(a.st_time!=b.st_time) return a.st_time < b.st_time;
-//         else{
-//             return a.owner < b.owner;
-//         }
-//     }
-// }
-
 market::market(int argc, char** argv)
 {
     std::ifstream file("output.txt");
@@ -78,7 +119,7 @@ void market::start()
 	for(int i=0;i<data.size();++i ) {
         // std::cout<<"HELLO: "<<i<<std::endl;
         int L = data[i].size();
-        struct order ord;                   //created an order
+        order ord;                   //created an order
         ord.st_time = stoi(data[i][0]);
         if(stoi(data[i][L-1]) == -1) ord.ed_time = -1;
         else ord.ed_time = stoi(data[i][L-1]) + ord.st_time;
@@ -93,12 +134,17 @@ void market::start()
             stock_name+=data[i][j];  // still have to take care of cases like a 1 b 1 and b 1 a 1 as they are same
         }
 
+        // std::cout<<stock_name<<" ♥ "<<std::endl;
+
         auto it=stocks.find(stock_name); //if not found then a completely new stock so input it into the database
 
         if(it==nullptr){
             struct stock st;
-            if(data[i][2]=="SELL") st.sell_orders.push_back(ord);
-            else st.buy_orders.push_back(ord);
+            if(data[i][2]=="SELL") {
+                ord.prc *= -1;
+                st.sell_orders.insert(ord);
+            }
+            else st.buy_orders.insert(ord);
             stock_vector.push_back(st);
             stocks.insert(stock_name,stock_index);
             stock_index++;
@@ -107,87 +153,66 @@ void market::start()
             int index=it->value;
             struct stock st = stock_vector[index]; //this is the stock of which the order is
             if(data[i][2]=="SELL"){
-                std::vector<int> dlt;
-                // if(stock_name == "AMD"){
-                //     std::cout<<"HEY"<<std::endl;
-                //     // std::cout<<st.buy_orders[j].owner<<std::endl;
-                // }
-                // std::sort(st.buy_orders.begin(),st.buy_orders.end(),scmp);
-                for(int j=0;j<st.buy_orders.size();j++){
-                    if((st.buy_orders[j].ed_time!=-1) && (st.buy_orders[j].ed_time<ord.st_time)) dlt.push_back(j);
-                    else{
-                        if(ord.qnt<=0) break; //to handle irrelevant quantities
-                        if(st.buy_orders[j].prc >= ord.prc){
-                            trades++;
-                            if(st.buy_orders[j].qnt <= ord.qnt){
-                                shares += st.buy_orders[j].qnt;
-                                ord.qnt -= st.buy_orders[j].qnt;
-                                dlt.push_back(j);
-                                std::cout<<"hi"<<std::endl;
-                                std::cout<<st.buy_orders[j].owner<<" purchased "<<st.buy_orders[j].qnt<<" share of "<<stock_name<<" from "<<ord.owner<<" for $"<<st.buy_orders[j].prc<<"/share"<<std::endl;
-                            }
-                            else{
-                                shares += ord.qnt;
-                                std::cout<<"hii"<<std::endl;
-                                std::cout<<st.buy_orders[j].owner<<" purchased "<<ord.qnt<<" share of "<<stock_name<<" from "<<ord.owner<<" for $"<<st.buy_orders[j].prc<<"/share"<<std::endl;
-                                ord.qnt = 0;
-                                break;
-                            }
-                        }
-                    }
+                st.buy_orders.remove_expiry(ord.st_time);
+                if(st.buy_orders.isEmpty()) {
+                    ord.prc *= -1;
+                    st.sell_orders.insert(ord);
+                    continue;
                 }
-                // for(int j=0;j<dlt.size();j++){
-                //     // std::cout<<dlt[j]<<std::endl;
-                //     st.buy_orders.erase(st.buy_orders.begin()+dlt[j]);
-                // }
-                if(ord.qnt>0){
-                    st.sell_orders.push_back(ord);
-                    // std::cout<<st.sell_orders.size()<<std::endl;
+                order best = st.buy_orders.max();
+                if(ord.qnt <= 0) continue;
+                if(best.prc < ord.prc) {
+                    ord.prc *= -1;
+                    st.sell_orders.insert(ord);
+                    continue;
+                }
+                if(best.qnt > ord.qnt) {
+                    trades++;
+                    shares += ord.qnt;
+                    best.qnt -= ord.qnt;
+                    std::cout<<best.owner<<" purchased "<<ord.qnt<<" share of "<<stock_name<<" from "<<ord.owner<<" for $"<<best.prc<<"/share"<<std::endl;
+                    continue;
+                }
+                else {
+                    trades++;
+                    shares += best.qnt;
+                    st.buy_orders.remove(0);
+                    ord.prc *= -1;
+                    st.sell_orders.insert(ord);
+                    std::cout<<best.owner<<" purchased "<<best.qnt<<" share of "<<stock_name<<" from "<<ord.owner<<" for $"<<best.prc<<"/share"<<std::endl;
+                    continue;
                 }
             }
             else{
-                // std::cout<<"hi"<<std::endl;
-                std::vector<int> dlt;
-                // std::sort(st.sell_orders.begin(),st.sell_orders.end(),bcmp);
-                for(int j=0;j<st.sell_orders.size();j++){
-                    if(stock_name=="AMD"){
-                    std::cout<<st.sell_orders.size()<<std::endl;
-                    // std::cout<<st.sell_orders[0].owner<<std::endl;
-                    std::cout<<"HEY"<<std::endl;
-                    }
-                    // std::cout<<st.sell_orders.size()<<std::endl;
-                    if((st.sell_orders[j].ed_time!=-1) && (st.sell_orders[j].ed_time<ord.st_time)) dlt.push_back(j);
-                    else{
-                        if(ord.qnt<=0) break; //to handle irrelevant quantities
-                        // std::cout<<"hi"<<std::endl;
-                        if(st.sell_orders[j].prc <= ord.prc){
-                            trades++;
-                            if(st.sell_orders[j].qnt <= ord.qnt){
-                                shares += st.sell_orders[j].qnt;
-                                ord.qnt -= st.sell_orders[j].qnt;
-                                dlt.push_back(j); 
-                                std::cout<<"hiii"<<std::endl;
-                                std::cout<<ord.owner<<" purchased "<<st.sell_orders[j].qnt<<" share of "<<stock_name<<" from "<<st.sell_orders[j].owner<<" for $"<<st.sell_orders[j].prc<<"/share"<<std::endl;
-                            }
-                            else{
-                                shares += ord.qnt;
-                                std::cout<<"hiiii"<<std::endl;
-                                std::cout<<st.sell_orders[j].owner<<" purchased "<<ord.qnt<<" share of "<<stock_name<<" from "<<ord.owner<<" for $"<<st.sell_orders[j].prc<<"/share"<<std::endl;
-                                ord.qnt = 0;
-                                break;
-                            }
-                        }
-                    }
+                st.sell_orders.remove_expiry(ord.st_time);
+                if(st.sell_orders.isEmpty()) {
+                    st.buy_orders.insert(ord);
+                    continue;
                 }
-                // for(int j=0;j<dlt.size();j++){
-                //     // std::cout<<dlt[j]<<std::endl;
-                //     st.sell_orders.erase(st.sell_orders.begin()+dlt[j]);
-                // }
-                if(ord.qnt>0){
-                    st.buy_orders.push_back(ord);
-                    // std::cout<<st.buy_orders.size()<<std::endl;
+                order best = st.sell_orders.max();
+                if(ord.qnt <= 0) continue;
+                if(best.prc + ord.prc < 0) {
+                    st.buy_orders.insert(ord);
+                    continue;
+                }
+                if(best.qnt > ord.qnt) {
+                    trades++;
+                    shares += ord.qnt;
+                    best.qnt -= ord.qnt;
+                    std::cout<<ord.owner<<" purchased "<<ord.qnt<<" share of "<<stock_name<<" from "<<best.owner<<" for $"<<(-1)*best.prc<<"/share"<<std::endl;
+                    continue;
+                }
+                else {
+                    trades++;
+                    shares += best.qnt;
+                    st.buy_orders.remove(0);
+                    st.buy_orders.insert(ord);
+                    std::cout<<ord.owner<<" purchased "<<best.qnt<<" share of "<<stock_name<<" from "<<best.owner<<" for $"<<(-1)*best.prc<<"/share"<<std::endl;
+                    continue;
                 }
             }
         }
     }
+    std::cout<<std::endl<<"---End of Day---"<<std::endl;
+    std::cout<<"Number of Completed Trades: "<<trades<<std::endl<<"Number of Shares Traded: "<<shares<<std::endl;
 }
