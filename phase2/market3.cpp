@@ -59,9 +59,7 @@ struct order_heap {
     }
 
     void remove(int i) {
-        store[i]->prc = 2147483647;
         while(i>0) {
-            if(!comp(store[(i-1)/2],store[i])) break;
             order * temp = store[i];
             store[i] = store[(i-1)/2];
             store[(i-1)/2] = temp;
@@ -92,9 +90,11 @@ struct stock{
 
 struct broker {
     std::string name;
-
+    int transfer, bought, sold;
+    broker() {transfer = 0; bought = 0; sold = 0;}
 };
-std::vector<stock *> stock_vector;
+std::vector <broker*> * broker_vector = new std::vector <broker*>();
+std::vector <stock*> * stock_vector = new std::vector<stock*>();
 market::market(int argc, char** argv)
 {
     std::ifstream file("output.txt");
@@ -122,6 +122,7 @@ void market::start()
     int broker_index=0;
     int trades=0;
     int shares=0;
+    int total = 0;
 
 	for(int i=0;i<data.size();++i ) {
         // std::cout<<"HELLO: "<<i<<std::endl;
@@ -151,19 +152,15 @@ void market::start()
                 st->sell_orders->insert(ord);
             }
             else st->buy_orders->insert(ord);
-            stock_vector.push_back(st);
+            (*stock_vector).push_back(st);
             stocks.insert(stock_name,stock_index);
             stock_index++;
         }
         else{ //if found then look for trade
-        // std::cout<<stock_name<<" ♥ "<<std::endl;
             int index=it->value;
-            stock * st = stock_vector[index]; //this is the stock of which the order is
+            stock * st = (*stock_vector)[index]; //this is the stock of which the order is
             if(data[i][2]=="SELL"){
-                // std::cout<<st->buy_orders->sz<<std::endl;
-                // ord->print();
                 st->buy_orders->remove_expiry(ord->st_time);
-                // std::cout<<st->buy_orders->sz<<" "<<stock_name<<std::endl;
                 if(st->buy_orders->isEmpty()) {
                     ord->prc *= -1;
                     st->sell_orders->insert(ord);
@@ -176,20 +173,75 @@ void market::start()
                     st->sell_orders->insert(ord);
                     continue;
                 }
+                bool flag = 0;
+                while(best->qnt <= ord->qnt) {
+                    trades++;
+                    shares += best->qnt;
+                    ord->qnt -= best->qnt;
+                    int ind1,ind2;
+                    auto it1 = brokers.find(best->owner);
+                    if(!it1) {
+                        brokers.insert(best->owner,broker_index++);
+                        broker * temp = new broker();
+                        temp->name = best->owner;
+                        (*broker_vector).push_back(temp);
+                    }
+                    auto it2 = brokers.find(best->owner);
+                    if(!it2) {
+                        brokers.insert(ord->owner,broker_index++);
+                        broker * temp = new broker();
+                        temp->name = ord->owner;
+                        (*broker_vector).push_back(temp);
+                    }
+                    it1 = brokers.find(best->owner);
+                    it2 = brokers.find(ord->owner);
+                    (*broker_vector)[it1->value]->transfer -= (best->qnt)*(best->prc);
+                    (*broker_vector)[it2->value]->transfer += (best->qnt)*(best->prc);
+                    (*broker_vector)[it1->value]->bought += best->qnt;
+                    (*broker_vector)[it2->value]->sold += best->qnt;
+                    std::cout<<best->owner<<" purchased "<<best->qnt<<" share of "<<stock_name<<" from "<<ord->owner<<" for $"<<best->prc<<"/share"<<std::endl;
+                    st->buy_orders->remove(0);
+                    if(st->buy_orders->isEmpty()) {
+                        flag = 1;
+                        ord->prc *= -1;
+                        st->sell_orders->insert(ord);
+                        break;
+                    }
+                    best = st->buy_orders->max();
+                    if(best->prc < ord->prc) {
+                        flag = 1;
+                        ord->prc *= -1;
+                        st->sell_orders->insert(ord);
+                        break;
+                    }
+                }
+                if(flag) continue;
                 if(best->qnt > ord->qnt) {
                     trades++;
                     shares += ord->qnt;
                     best->qnt -= ord->qnt;
+                    int ind1,ind2;
+                    auto it1 = brokers.find(best->owner);
+                    if(!it1) {
+                        brokers.insert(best->owner,broker_index++);
+                        broker * temp = new broker();
+                        temp->name = best->owner;
+                        (*broker_vector).push_back(temp);
+                    }
+                    auto it2 = brokers.find(best->owner);
+                    if(!it2) {
+                        brokers.insert(ord->owner,broker_index++);
+                        broker * temp = new broker();
+                        temp->name = ord->owner;
+                        (*broker_vector).push_back(temp);
+                    }
+                    it1 = brokers.find(best->owner);
+                    it2 = brokers.find(ord->owner);
+                    (*broker_vector)[it1->value]->transfer -= (ord->qnt)*(best->prc);
+                    (*broker_vector)[it2->value]->transfer += (ord->qnt)*(best->prc);
+                    (*broker_vector)[it1->value]->bought += ord->qnt;
+                    (*broker_vector)[it2->value]->sold += ord->qnt;
                     std::cout<<best->owner<<" purchased "<<ord->qnt<<" share of "<<stock_name<<" from "<<ord->owner<<" for $"<<best->prc<<"/share"<<std::endl;
-                    continue;
-                }
-                else {
-                    trades++;
-                    shares += best->qnt;
-                    st->buy_orders->remove(0);
-                    ord->prc *= -1;
-                    st->sell_orders->insert(ord);
-                    std::cout<<best->owner<<" purchased "<<best->qnt<<" share of "<<stock_name<<" from "<<ord->owner<<" for $"<<best->prc<<"/share"<<std::endl;
                     continue;
                 }
             }
@@ -206,19 +258,75 @@ void market::start()
                     st->buy_orders->insert(ord);
                     continue;
                 }
+                bool flag = 0;
+                while(best->qnt <= ord->qnt) {
+                    trades++;
+                    shares += best->qnt;
+                    ord->qnt -= best->qnt;
+                    int ind1,ind2;
+                    auto it1 = brokers.find(best->owner);
+                    if(!it1) {
+                        brokers.insert(best->owner,broker_index++);
+                        broker * temp = new broker();
+                        temp->name = best->owner;
+                        (*broker_vector).push_back(temp);
+                    }
+                    auto it2 = brokers.find(best->owner);
+                    if(!it2) {
+                        brokers.insert(ord->owner,broker_index++);
+                        broker * temp = new broker();
+                        temp->name = ord->owner;
+                        (*broker_vector).push_back(temp);
+                    }
+                    it1 = brokers.find(best->owner);
+                    it2 = brokers.find(ord->owner);
+                    (*broker_vector)[it1->value]->transfer -= (best->qnt)*(best->prc);
+                    (*broker_vector)[it2->value]->transfer += (best->qnt)*(best->prc);
+                    (*broker_vector)[it1->value]->sold += best->qnt;
+                    (*broker_vector)[it2->value]->bought += best->qnt;
+                    std::cout<<ord->owner<<" purchased "<<best->qnt<<" share of "<<stock_name<<" from "<<best->owner<<" for $"<<(-1)*best->prc<<"/share"<<std::endl;
+                    st->sell_orders->remove(0);
+                    if(st->sell_orders->isEmpty()) {
+                        flag = 1;
+                        st->buy_orders->insert(ord);
+                        break;
+                    }
+                    best = st->sell_orders->max();
+                    if(best->prc + ord->prc < 0) {
+                        flag = 1;
+                        st->buy_orders->insert(ord);
+                        break;
+                    }
+                }
+                if(flag) continue;
                 if(best->qnt > ord->qnt) {
                     trades++;
                     shares += ord->qnt;
                     best->qnt -= ord->qnt;
+                    int ind1,ind2;
+                    auto it1 = brokers.find(best->owner);
+                    if(!it1) {
+                        brokers.insert(best->owner,broker_index++);
+                        broker * temp = new broker();
+                        temp->name = best->owner;
+                        (*broker_vector).push_back(temp);
+                    }
+                    auto it2 = brokers.find(best->owner);
+                    if(!it2) {
+                        brokers.insert(ord->owner,broker_index++);
+                        broker * temp = new broker();
+                        temp->name = ord->owner;
+                        (*broker_vector).push_back(temp);
+                    }
+                    
+                    it1 = brokers.find(best->owner);
+                    it2 = brokers.find(ord->owner);
+                    auto x = (*broker_vector)[it2->value];
+                    (*broker_vector)[it1->value]->transfer -= (ord->qnt)*(best->prc);
+                    (*broker_vector)[it2->value]->transfer += (ord->qnt)*(best->prc);
+                    (*broker_vector)[it1->value]->sold += ord->qnt;
+                    (*broker_vector)[it2->value]->bought += ord->qnt;
                     std::cout<<ord->owner<<" purchased "<<ord->qnt<<" share of "<<stock_name<<" from "<<best->owner<<" for $"<<(-1)*best->prc<<"/share"<<std::endl;
-                    continue;
-                }
-                else {
-                    trades++;
-                    shares += best->qnt;
-                    st->buy_orders->remove(0);
-                    st->buy_orders->insert(ord);
-                    std::cout<<ord->owner<<" purchased "<<best->qnt<<" share of "<<stock_name<<" from "<<best->owner<<" for $"<<(-1)*best->prc<<"/share"<<std::endl;
                     continue;
                 }
             }
@@ -226,4 +334,8 @@ void market::start()
     }
     std::cout<<std::endl<<"---End of Day---"<<std::endl;
     std::cout<<"Number of Completed Trades: "<<trades<<std::endl<<"Number of Shares Traded: "<<shares<<std::endl;
+    for(int i = 0;i< broker_index;++i) {
+        auto temp = (*broker_vector)[i];
+        std::cout<<temp->name<<" bought "<<temp->bought<<" and sold "<<temp->sold<<" for a net transfer of $"<<temp->transfer<<std::endl;
+    }
 }
